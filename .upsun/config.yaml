@@ -10,10 +10,6 @@ applications:
       build: |
         set -eu
 
-        echo "==> Build container resources:"
-        echo "    cgroup memory.max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo unknown)"
-        echo "    nproc: $(nproc 2>/dev/null || echo unknown)"
-
         echo "==> Cloning LibreChat v0.8.5..."
         git clone --depth=1 --branch v0.8.5 https://github.com/danny-avila/LibreChat .librechat
 
