@@ -1,10 +1,18 @@
 applications:
   librechat:
     type: "nodejs:20"
+    # Node default is the HIGH_CPU profile (memory-lean: max 2240MB). The Vite
+    # client build peaks above 2GB and the Node server needs real headroom, so
+    # run on HIGH_MEMORY. The build container inherits this profile/size too.
+    container_profile: HIGH_MEMORY
 
     hooks:
       build: |
         set -eu
+
+        echo "==> Build container resources:"
+        echo "    cgroup memory.max: $(cat /sys/fs/cgroup/memory.max 2>/dev/null || cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null || echo unknown)"
+        echo "    nproc: $(nproc 2>/dev/null || echo unknown)"
 
         echo "==> Cloning LibreChat v0.8.5..."
         git clone --depth=1 --branch v0.8.5 https://github.com/danny-avila/LibreChat .librechat
@@ -14,9 +22,9 @@ applications:
         NODE_ENV=development npm ci
 
         echo "==> Building frontend..."
-        # Vite's client bundle exceeds Node's default heap ceiling (OOMs at ~1.5GB).
-        # The build container has ~10GB, so lift the V8 old-space limit for this step.
-        NODE_OPTIONS="--max-old-space-size=4096" npm run frontend
+        # The Vite client bundle's working set exceeds ~2GB. Cap V8's old-space
+        # below the container ceiling so GC stays aggressive without a cgroup OOM.
+        NODE_OPTIONS="--max-old-space-size=3072" npm run frontend
 
         echo "==> LibreChat build done."
 
