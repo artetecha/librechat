@@ -14,7 +14,9 @@ applications:
         NODE_ENV=development npm ci
 
         echo "==> Building frontend..."
-        npm run frontend
+        # Vite's client bundle exceeds Node's default heap ceiling (OOMs at ~1.5GB).
+        # The build container has ~10GB, so lift the V8 old-space limit for this step.
+        NODE_OPTIONS="--max-old-space-size=4096" npm run frontend
 
         echo "==> LibreChat build done."
 
