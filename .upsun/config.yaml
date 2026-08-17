@@ -21,9 +21,20 @@ applications:
         cd .librechat
         NODE_ENV=development npm ci
 
+        echo "==> Hardening frontend build: terser -> esbuild minifier..."
+        # LibreChat's client vite.config.ts uses minify:'terser', which spawns
+        # parallel terser workers that each hold chunk source in memory during
+        # "rendering chunks" — the phase that OOM-kills this build. Vite's
+        # built-in esbuild minifier does the same job in one bounded process
+        # with a fraction of the peak memory. Patch it post-clone and verify the
+        # substitution actually applied, so we never silently ship the heavy path.
+        sed -i "s/minify: 'terser'/minify: 'esbuild'/" client/vite.config.ts
+        grep -q "minify: 'esbuild'" client/vite.config.ts \
+          || { echo "E: minify patch did not apply (vite.config.ts changed upstream?)"; exit 1; }
+
         echo "==> Building frontend..."
-        # The Vite client bundle's working set exceeds ~2GB. Cap V8's old-space
-        # below the container ceiling so GC stays aggressive without a cgroup OOM.
+        # Keep a heap cap below the container ceiling as a second line of defence
+        # so GC stays aggressive if peak memory still climbs.
         NODE_OPTIONS="--max-old-space-size=3072" npm run frontend
 
         echo "==> LibreChat build done."
