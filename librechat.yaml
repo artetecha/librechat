@@ -1,2 +1,22 @@
 version: "1.3.0"
 cache: true
+
+endpoints:
+  custom:
+    # OpenRouter is an OpenAI-compatible gateway, so it is wired as a custom
+    # endpoint rather than a built-in provider. The API key is injected from the
+    # OPENROUTER_KEY environment variable (set as a sensitive Upsun variable):
+    #   upsun variable:create -p uke4k6x4v2les -e main --level environment \
+    #     --sensitive=true --name=env:OPENROUTER_KEY --value='sk-or-...'
+    - name: "OpenRouter"
+      apiKey: "${OPENROUTER_KEY}"
+      baseURL: "https://openrouter.ai/api/v1"
+      models:
+        # fetch: true pulls OpenRouter's full model catalogue at runtime using
+        # the key, so the list doesn't have to be maintained by hand.
+        default: ["openai/gpt-4o", "anthropic/claude-3.7-sonnet"]
+        fetch: true
+      titleConvo: true
+      titleModel: "openai/gpt-4o-mini"
+      # OpenRouter rejects a few OpenAI-style params; drop them to avoid 400s.
+      dropParams: ["stop"]
